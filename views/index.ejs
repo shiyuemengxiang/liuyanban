@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/jquery-1.11.3.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script src="js/underscore_noConflict.js"></script>
+    <title>个人留言板</title>
+    <style>
+        *{
+            padding: 0;
+            margin: 0;
+        }
+        form {
+            font-size:1.35em;
+        }
+        body{
+            background:url("chuyin.jpg") repeat-x ;
+            background-size:33%;
+        }
+        .hiden{
+            display:none;
+        }
+        nav{
+            width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        nav ul{
+            margin-left:50%!important;
+            transform: translateX(-50%);
+
+        }
+    </style>
+</head>
+<body>
+        <div class="container">
+            <div class="h1 text-center text-primary">留言板</div>
+            <form action="/tj" method="post" id="form">
+                <div class="form-group">
+                    <label for="exampleInputEmail1"> 昵称</label>
+                    <input type="text" class="form-control" id="Uname" name="Uname" placeholder="请输入您的名称" style="background:url("chuyin.jpg") repeat-x ;">
+                </div>
+                <div class="form-group">
+                    <label for="">留言内容</label>
+                    <textarea class="form-control" rows="6" name="neirong"  id="neirong" placeholder="在这里请输入您对作者说的话..." style="background:url("chuyin.jpg") repeat-x ;"></textarea>
+                </div>
+                <button type="button" class="btn btn-default btn-success btn-lg center-block" id="tj">提交</button>
+                <div class="alert alert-success alert-dismissible hiden" id="success" role="alert" >
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <strong>恭喜你!</strong> 您已经成功留言!
+                </div>
+                <div class="alert alert-danger alert-dismissible hiden" id="danger" role="alert">
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <strong>很抱歉!</strong> 您的留言提交失败!不要生气啦!请重新提交试一下!
+                </div>
+            </form>
+            <div id="main">
+
+            </div>
+            <!--分页-->
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+
+                    <% for(var i=1;i<=count;i++){ %>
+                    <li data-page="<%= i%>" class="fenye"><a href="#"><%= i%></a></li>
+                    <% }%>
+
+                </ul>
+            </nav>
+            <!--模板-->
+            <script type="text/template" id="muban">
+                <div class="item ">
+                    <div class="panel panel-info">
+                        <div class="panel-body h3 text-primary">
+                            {{= Uname}}
+                        </div>
+                        <div class="panel-footer">
+                            <p class="h4">[内容]: {{= neirong}}</p>
+                            <p class="h5 text-danger">[时间]: {{= date}}</p>
+                            <p><a href="/del?id={{=obj._id}}">删除</a></p>
+                        </div>
+                    </div>
+                </div>
+            </script>
+            <!--ajax请求处理提交表单-->
+            <script>
+                $('#tj').click(function(){
+                    if($('#Uname').val()!=="" && $('#neirong').val()!==""){
+                        $("#danger,#success").hide();
+                        $.post("/tj",{
+                            "Uname":$("#Uname").val(),
+                            "neirong":$("#neirong").val()
+                        },function(result){
+                            //result为post反馈数据
+                            $("#Uname").val=0;
+                            console.log(result)
+                            if(result==-1){
+                                console.log(result+"+++++++")
+                                $('#danger').fadeIn(300);
+
+                            }else if(result==1){
+                                console.log(result+"-------------")
+                                $('#success').fadeIn(300);
+                                //提交数据后呈现一个假数据
+                                var muban=$('#muban').html();
+                                var compiled=_.template(muban);
+                                var mbString=compiled({"Uname":$('#Uname').val(),"neirong":$('#neirong').val(),"date":new Date()})
+                                console.log($('#Uname').val);
+                                $('#main').prepend(mbString)
+                                $('#form')[0].reset();//提交成功后,清空表单数据
+
+                            }
+
+                        })
+                    }else{
+                        alert("留言内容或留言昵称不能为空!")
+                    }
+                })
+            </script>
+            <!--ajax显示数据-->
+            <script>
+                //获得模板
+                var muban=$("#muban").html();
+                //封装模板
+                var compiled = _.template(muban);
+                getApi(1);//默认请求第一页
+                //默认显示第一页
+                $(".fenye:first-child").addClass('active');
+                    //点击更换页码
+                    $('.fenye').click(function(){
+                        $(this).addClass('active').siblings().removeClass('active');
+                        //点击的页码
+                        var page=$(this).attr("data-page");
+                        //情况之前页码的所有留言
+                        $('#main').html("");
+                        console.log($('#main').html)
+                        getApi(page);//重新显示请求页码数据
+
+                    })
+
+                function getApi(page){
+                    $.get("/api?page="+(page-1),function(data,status){
+                        for(var i=0;i<data.length;i++){
+                            //绑定数据
+                            var mbString=compiled(data[i]);
+                            $("#main").append(mbString)
+                        }
+                    })
+                }
+
+            </script>
+        </div>
+</body>
+</html>
